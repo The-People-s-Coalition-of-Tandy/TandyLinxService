@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "nodemon -e '*' app.js",
-    "postinstall": "npm rebuild bcrypt && npm rebuild better-sqlite3",
+    "postinstall": "npm rebuild bcryptjs && npm rebuild better-sqlite3",
     "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -16,7 +16,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "bcrypt": "^5.1.1",
+    "bcryptjs": "^2.4.3",
     "better-sqlite3": "^9.4.5",
     "body-parser": "^1.20.2",
     "dotenv": "^16.4.5",

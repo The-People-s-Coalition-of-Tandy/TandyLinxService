@@ -9,7 +9,7 @@ import {
     fileURLToPath
 } from "url";
 import session from 'express-session';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 
 dotenv.config();
