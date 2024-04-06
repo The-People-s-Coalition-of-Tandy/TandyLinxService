@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon -e '*' app.js",
+    "postinstall": "npm rebuild bcrypt && npm rebuild better-sqlite3",
     "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
