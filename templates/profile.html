@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="index.css">
+    <title>Create TandyLinx Page</title>
+</head>
+
+<body>
+    <h1>Hello {{ username }} </h1>
+    {% if pages and pages.length > 0 %}
+        {% for page in pages %}
+            <a href="/{{ page.pageName }}">{{ page.pageName }}</a><a href="/edit/{{ page.pageName }}">Edit</a><br>
+        {% endfor %}
+    {% endif %}
+    
+    <br><br>
+    <a href="/create">Create a new TandyLinx</a>
+    <br><br>
+        <!-- Logout Form -->
+        <form action="/logout" method="post">
+            <button type="submit">Logout</button>
+        </form>
+</body>
+
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Create TandyLinx Page</title>
+    <link rel="stylesheet" href="/index.css">
+</head>
+
+<body>
+    <h1>Create a New TandyLinx Page</h1>
+    {% if errorMessage %}
+    <p style="color: red;">{{ errorMessage }}</p>
+    {% endif %}
+
+
+    <form id="linksForm" action="/create" method="POST">
+        <input type="text" name="pageName" placeholder="Page Name" required value="{{ pageName }}" id="pageNameInput">
+        <!-- Status indicator -->
+        <span id="nameStatus"></span>
+        <!-- Style Selector Dropdown -->
+        <label for="styleSelector">Choose a style:</label>
+        <select name="style" id="styleSelector">
+            {% for style in styles %}
+                <option value="{{ style.name }}">{{ style.displayName }}</option>
+            {% endfor %}
+        </select>
+        <div id="linksContainer">
+            {% if links and links.length > 0 %}
+            {% for link in links %}
+                <div class="linkPair">
+                    <input type="text" name="linkNames[]" placeholder="Link Name" required value="{{ link.name }}">
+                    <input type="text" name="linkURLs[]" placeholder="Link URL" required value="{{ link.url }}">
+                </div>
+            {% endfor %}
+            {% else %}
+                <div class="linkPair">
+                    <input type="text" name="linkNames[]" placeholder="Link Name" required value="{{ link.name }}">
+                    <input type="text" name="linkURLs[]" placeholder="Link URL" required value="{{ link.url }}">
+                </div>
+            {% endif %}
+        </div>
+
+        <button type="button" id="addLink">Add Another Link</button>
+        <button type="submit">Create</button>
+    </form>
+
+    <script>
+        document.getElementById('addLink').addEventListener('click', function () {
+            const container = document.getElementById('linksContainer');
+            const newPairDiv = document.createElement('div');
+            newPairDiv.classList.add('linkPair');
+    
+            const newNameField = document.createElement('input');
+            newNameField.setAttribute('type', 'text');
+            newNameField.setAttribute('name', 'linkNames[]');
+            newNameField.setAttribute('placeholder', 'Link Name');
+            newNameField.required = true;
+            
+            const newURLField = document.createElement('input');
+            newURLField.setAttribute('type', 'text');
+            newURLField.setAttribute('name', 'linkURLs[]');
+            newURLField.setAttribute('placeholder', 'Link URL');
+            newURLField.required = true;
+    
+            newPairDiv.appendChild(newNameField);
+            newPairDiv.appendChild(newURLField);
+            container.appendChild(newPairDiv);
+        });
+    </script>    
+
+    <script>
+        document.getElementById('pageNameInput').addEventListener('input', async function () {
+            const pageNameInput = this.value;
+            const statusIndicator = document.getElementById('nameStatus');
+
+            if (pageNameInput.length === 0) {
+                statusIndicator.textContent = ''; // Clear status when input is empty
+                return;
+            }
+
+            try {
+                const response = await fetch(`/checkPageName?name=${encodeURIComponent(pageNameInput)}`);
+                if (!response.ok) throw new Error('Network response was not ok.');
+                const data = await response.json();
+
+                if (data.exists) {
+                    statusIndicator.textContent = " taken"//'❌ taken'; // Page name exists
+                    statusIndicator.style.color = 'red';
+                } else {
+                    statusIndicator.textContent = " available"//'✅ available'; // Page name is available
+                    statusIndicator.style.color = 'green';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                statusIndicator.textContent = 'Error checking name'; // Display error
+                statusIndicator.style.color = 'orange';
+            }
+        });
+    </script>
+
+
+</body>
+
+</html>

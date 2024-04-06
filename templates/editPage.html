@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/index.css">
+    <title>Edit {{ pageName }}</title>
+</head>
+<body>
+    <h1>Edit {{ pageName }}</h1>
+    <form action="/update/{{ pageName }}" method="POST">
+        <input type="text" name="pageName" placeholder="Page Name" required value="{{ pageName }}" id="pageNameInput">
+        <!-- Status indicator -->
+        <span id="nameStatus"></span>
+        <!-- Iterate over links to create inputs for each one -->
+        {% for link in links %}
+        <div class="link-input">
+            <input type="text" name="linkNames[]" placeholder="Link Name" value="{{ link.name }}" required>
+            <input type="text" name="linkURLs[]" placeholder="Link URL" value="{{ link.url }}" required>
+        </div>
+        {% endfor %}
+        <select name="style">
+            {% for style in styles %}
+                <option value="{{ style.name }}">{{ style.displayName }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Update</button>
+    </form>
+
+    <script>
+        document.getElementById('pageNameInput').addEventListener('input', async function () {
+            const pageNameInput = this.value;
+            const statusIndicator = document.getElementById('nameStatus');
+
+            if (pageNameInput.length === 0) {
+                statusIndicator.textContent = ''; // Clear status when input is empty
+                return;
+            }
+
+            try {
+                const response = await fetch(`/checkPageName?name=${encodeURIComponent(pageNameInput)}`);
+                if (!response.ok) throw new Error('Network response was not ok.');
+                const data = await response.json();
+
+                if (data.exists) {
+                    statusIndicator.textContent = " taken"//'❌ taken'; // Page name exists
+                    statusIndicator.style.color = 'red';
+                } else {
+                    statusIndicator.textContent = " available"//'✅ available'; // Page name is available
+                    statusIndicator.style.color = 'green';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                statusIndicator.textContent = 'Error checking name'; // Display error
+                statusIndicator.style.color = 'orange';
+            }
+        });
+    </script>
+</body>
+</html>
