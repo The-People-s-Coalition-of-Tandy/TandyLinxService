@@ -11,7 +11,8 @@ db.exec(`
   
   CREATE TABLE IF NOT EXISTS links (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    pageName TEXT UNIQUE NOT NULL,
+    pageTitle TEXT UNIQUE NOT NULL,
+    pageURL TEXT UNIQUE NOT NULL,
     links TEXT NOT NULL,
     style TEXT DEFAULT 'default',
     userId INTEGER,

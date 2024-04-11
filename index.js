@@ -66,9 +66,8 @@ app.get("/profile", checkAuthenticated, (req, res) => {
     const query = db.prepare("SELECT username FROM users WHERE id = ?");
     const user = query.get(userId);
 
-    const stmt = db.prepare("SELECT pageName FROM links WHERE userId = ?");
+    const stmt = db.prepare("SELECT pageTitle, pageURL FROM links WHERE userId = ?");
     const pages = stmt.all(userId);
-    console.log(pages);
 
     res.render("profile.html", {
         username: user.username,
@@ -76,34 +75,7 @@ app.get("/profile", checkAuthenticated, (req, res) => {
     });
 })
 
-app.get("/create", (req, res) => {
-    // Extract query parameters if any
-    const {
-        error,
-        pageName,
-        links
-    } = req.query;
 
-    const stylesPath = path.join(__dirname, 'styles.json');
-    const styles = JSON.parse(fs.readFileSync(stylesPath, 'utf8'));
-
-    // If there are links, parse them back into an array
-    let linksArray = [];
-    if (links) {
-        try {
-            linksArray = JSON.parse(links);
-        } catch (parseError) {
-            console.error(parseError);
-        }
-    }
-
-    res.render("create.html", {
-        errorMessage: error,
-        pageName: pageName || "",
-        links: linksArray,
-        styles,
-    });
-});
 
 app.get('/register', (req, res) => {
     res.render('register.html');
@@ -163,13 +135,13 @@ app.post('/logout', (req, res) => {
     });
 });
 
-app.get("/checkPageName", (req, res) => {
-    const pageName = req.query.name;
+app.get("/checkpageURL", (req, res) => {
+    const pageURL = req.query.name;
     const checkStmt = db.prepare(
-        "SELECT EXISTS(SELECT 1 FROM links WHERE pageName = ?) AS exist"
+        "SELECT EXISTS(SELECT 1 FROM links WHERE pageURL = ?) AS exist"
     );
-    console.log(pageName);
-    const exist = checkStmt.get(pageName).exist;
+    console.log(pageURL);
+    const exist = checkStmt.get(pageURL).exist;
 
     res.json({
         exists: !!exist
@@ -188,10 +160,38 @@ app.get("/checkUsername", (req, res) => {
         exists: !!exist
     });
 });
+app.get("/create", (req, res) => {
+    // Extract query parameters if any
+    const {
+        error,
+        pageURL,
+        links
+    } = req.query;
 
+    const stylesPath = path.join(__dirname, 'styles.json');
+    const styles = JSON.parse(fs.readFileSync(stylesPath, 'utf8'));
+
+    // If there are links, parse them back into an array
+    let linksArray = [];
+    if (links) {
+        try {
+            linksArray = JSON.parse(links);
+        } catch (parseError) {
+            console.error(parseError);
+        }
+    }
+
+    res.render("create.html", {
+        errorMessage: error,
+        pageURL: pageURL || "",
+        links: linksArray,
+        styles,
+    });
+});
 app.post("/create", (req, res) => {
     const {
-        pageName,
+        pageURL,
+        pageTitle,
         linkNames,
         linkURLs,
         style
@@ -210,16 +210,16 @@ app.post("/create", (req, res) => {
         return res.redirect('/login');
     }
 
-    const checkStmt = db.prepare("SELECT EXISTS(SELECT 1 FROM links WHERE pageName = ?) AS exist");
-    const exist = checkStmt.get(pageName).exist;
+    const checkStmt = db.prepare("SELECT EXISTS(SELECT 1 FROM links WHERE pageURL = ?) AS exist");
+    const exist = checkStmt.get(pageURL).exist;
 
     if (exist) {
         return res.redirect('/create?error=Page name already exists. Please choose a different name.');
     } else {
         try {
-            const insertStmt = db.prepare("INSERT INTO links (pageName, links, style, userId) VALUES (?, ?, ?, ?)");
-            insertStmt.run(pageName, linksJSON, style, userId);
-            res.redirect(`/${pageName}`);
+            const insertStmt = db.prepare("INSERT INTO links (pageURL, pageTitle, links, style, userId) VALUES (?, ?, ?, ?, ?)");
+            insertStmt.run(pageURL, pageTitle, linksJSON, style, userId);
+            res.redirect(`/${pageURL}`);
         } catch (err) {
             console.error(err.message);
             res.status(500).send("Failed to create the TandyLinx page.");
@@ -228,16 +228,16 @@ app.post("/create", (req, res) => {
 });
 
 
-app.get("/:pageName", (req, res) => {
+app.get("/:pageURL", (req, res) => {
     try {
-        const stmt = db.prepare("SELECT links, style, pageName FROM links WHERE pageName = ?");
-        const row = stmt.get(req.params.pageName);
+        const stmt = db.prepare("SELECT links, style, pageTitle FROM links WHERE pageURL = ?");
+        const row = stmt.get(req.params.pageURL);
         if (row) {
             console.log(row);
             const links = JSON.parse(row.links); // Parse the JSON string back into an array
             res.render(row.style, {
                 links,
-                pageName: row.pageName
+                pageTitle: row.pageTitle
             });
         } else {
             res.status(404).send("Page not found");
@@ -248,21 +248,22 @@ app.get("/:pageName", (req, res) => {
     }
 });
 
-app.get("/edit/:pageName", checkAuthenticated, (req, res) => {
-    const pageName = req.params.pageName;
+app.get("/edit/:pageURL", checkAuthenticated, (req, res) => {
+    const pageURL = req.params.pageURL;
     const userId = req.session.userId;
 
     const stylesPath = path.join(__dirname, 'styles.json');
     const styles = JSON.parse(fs.readFileSync(stylesPath, 'utf8'));
 
     try {
-        const stmt = db.prepare("SELECT * FROM links WHERE pageName = ? AND userId = ?");
-        const pageData = stmt.get(pageName, userId);
+        const stmt = db.prepare("SELECT * FROM links WHERE pageURL = ? AND userId = ?");
+        const pageData = stmt.get(pageURL, userId);
 
         if (pageData) {
             const links = JSON.parse(pageData.links); // Assuming links are stored as a JSON string
             res.render("editPage", {
-                pageName: pageData.pageName,
+                pageURL: pageData.pageURL,
+                pageTitle: pageData.pageTitle,
                 links: links,
                 style: pageData.style,
                 styles: styles
@@ -276,9 +277,9 @@ app.get("/edit/:pageName", checkAuthenticated, (req, res) => {
     }
 });
 
-app.post("/update/:pageName", checkAuthenticated, (req, res) => {
-    const originalPageName = req.params.pageName;
-    const { linkNames, linkURLs, style, pageName } = req.body;
+app.post("/update/:pageURL", checkAuthenticated, (req, res) => {
+    const originalpageURL = req.params.pageURL;
+    const { linkNames, linkURLs, style, pageURL, pageTitle } = req.body;
     const userId = req.session.userId; // Verify this is the owner of the link page
 
     // Combine link names and URLs into an array of objects
@@ -287,18 +288,18 @@ app.post("/update/:pageName", checkAuthenticated, (req, res) => {
         url: linkURLs[index]
     }));
 
-    if(pageName !== originalPageName) {t 
-        const checkStmt = db.prepare("SELECT EXISTS(SELECT 1 FROM links WHERE pageName = ?) AS exist");
-        const exist = checkStmt.get(pageName).exist;
+    if(pageURL !== originalpageURL) { 
+        const checkStmt = db.prepare("SELECT EXISTS(SELECT 1 FROM links WHERE pageURL = ?) AS exist");
+        const exist = checkStmt.get(pageURL).exist;
 
         if (exist) {
-            return res.redirect(`/edit/${originalPageName}?error=Page name already exists. Please choose a different name.`);
+            return res.redirect(`/edit/${originalpageURL}?error=Page name already exists. Please choose a different name.`);
         }
     }
 
     try {
-        const updateStmt = db.prepare("UPDATE links SET links = ?, style = ? WHERE pageName = ? AND userId = ?");
-        updateStmt.run(JSON.stringify(links), style, pageName, userId);
+        const updateStmt = db.prepare("UPDATE links SET links = ?, style = ?, pageTitle = ?, pageURL = ? WHERE pageURL = ? AND userId = ?");
+        updateStmt.run(JSON.stringify(links), style, pageTitle, pageURL, originalpageURL, userId);
         
         res.redirect("/profile"); // Redirect to the profile page or the updated page itself
     } catch (err) {
