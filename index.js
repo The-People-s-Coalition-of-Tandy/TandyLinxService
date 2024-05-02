@@ -1,6 +1,7 @@
 import express from "express";
 import nunjucks from "nunjucks";
 import Database from "better-sqlite3";
+import connectSqlite3 from 'connect-sqlite3';
 import path, {
     dirname
 } from "path";
@@ -18,7 +19,9 @@ dotenv.config();
 const db = new Database("./tandylinx.db", {
     fileMustExist: true
 });
+
 const app = express();
+const SQLiteStore = connectSqlite3(session);
 
 // ES Module fix for __dirname
 const __filename = fileURLToPath(
@@ -35,14 +38,20 @@ app.use(express.urlencoded({
 app.set("view engine", "html");
 
 app.use(session({
-    secret: process.env.SECRET_KEY, // Change this to a random secret string
+    store: new SQLiteStore({
+        db: 'sessions.db',
+        dir: '../databases' // Directory where the db file resides
+    }),
+    secret: 'yourSecret',
+    saveUninitialized: false,
     resave: false,
-    saveUninitialized: true,
     cookie: {
-        secure: 'auto',
+        secure: process.env.NODE_ENV === 'production', // Only set secure to true in production
         httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
+
 
 // Nunjucks configuration
 nunjucks.configure("./templates", {
